@@ -1,8 +1,12 @@
 package com.IES.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,10 +36,24 @@ public class AccountServiceImpl implements AccountService{
 		entity.setAccountStatus("LOCKED");
 		entity.setActiveSw("Y");
 		//send email
-		String sub="";
-		String body="";
-		String to=userAccountForm.getEmail();
-		return emailUtils.sendEmail(to, sub, body);
+		String sub="User Registration";
+		String body=readEmailBody("REG_EMAIL_BODY.txt", entity);
+		return emailUtils.sendEmail(userAccountForm.getEmail(), sub, body);
+	}
+	
+	private String readEmailBody(String fileName, UserEntity userEntity) {
+		StringBuilder sb=new StringBuilder();
+		try(Stream<String> lines=Files.lines(Paths.get(fileName))) {
+			lines.forEach(line->{
+				line=line.replace("${FNAME}", userEntity.getFullName());
+				line=line.replace("${PWD}", userEntity.getPwd());
+				line=line.replace("${EMAIL}", userEntity.getEmail());
+				sb.append(line);
+			});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return sb.toString();
 	}
 
 	@Override

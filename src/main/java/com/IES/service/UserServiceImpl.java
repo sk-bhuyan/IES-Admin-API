@@ -1,12 +1,18 @@
 package com.IES.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Stream;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.IES.bindings.DashboardCards;
 import com.IES.bindings.LoginForm;
+import com.IES.bindings.UserAccForm;
 import com.IES.entities.EligEntity;
 import com.IES.entities.UserEntity;
 import com.IES.repositories.EligRepo;
@@ -49,11 +55,25 @@ public class UserServiceImpl implements UserService{
 		if(null==userEntity) {
 			return false;
 		}else {
-			String sub="";
-			String body="";
-			String to=userEntity.getEmail();
-			return emailUtils.sendEmail(to, sub, body);
+			String sub="Recover Pwd";
+			String body=readEmailBody("FORGOT_PWD_EMAIL_BODY.txt", userEntity);
+			return emailUtils.sendEmail(email, sub, body);
 		}
+	}
+
+	private String readEmailBody(String fileName, UserEntity userEntity) {
+		StringBuilder sb=new StringBuilder();
+		try(Stream<String> lines=Files.lines(Paths.get(fileName))) {
+			lines.forEach(line->{
+				line=line.replace("${FNAME}", userEntity.getFullName());
+				line=line.replace("${PWD}", userEntity.getPwd());
+				line=line.replace("${EMAIL}", userEntity.getEmail());
+				sb.append(line);
+			});
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return sb.toString();
 	}
 
 	@Override
@@ -71,5 +91,15 @@ public class UserServiceImpl implements UserService{
 		card.setBenefitAmntGiven(sum);
 		return card;
 	}
+
+	@Override
+	public UserAccForm getUserByEmail(String email) {
+		UserEntity userEntity = userRepo.findByEmail(email);
+		UserAccForm accForm=new UserAccForm();
+		BeanUtils.copyProperties(userEntity, accForm);
+		return accForm;
+	}
+	
+	
 
 }
